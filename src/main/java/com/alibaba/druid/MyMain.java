@@ -26,15 +26,29 @@ public class MyMain {
         dataSource.setInitialSize(1);
         dataSource.setMaxActive(2);
         dataSource.setMaxWait(1000);
-//        dataSource.wait
+
+        DruidDataSource dataSource1 = new DruidDataSource();
+        dataSource1.setDriverClassName("com.mysql.jdbc.Driver");
+        dataSource1.setDriverClassLoader(null);
+        dataSource1.setUrl("jdbc:mysql://101.200.83.54:3306/blog_log");
+        dataSource1.setUsername("root");
+        dataSource1.setPassword("Password!1");
+        dataSource1.setInitialSize(2);
+        dataSource1.setMaxActive(2);
+        dataSource1.setMaxWait(1000);
 
         try {
+            DruidPooledConnection connection2 = dataSource1.getConnection();
+            DruidPooledConnection connection3 = dataSource1.getConnection();
+            System.out.println("---2---"+connection2);
+            System.out.println("---3---"+connection3);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        try {
             DruidPooledConnection connection = dataSource.getConnection();
-            System.out.println(connection);
-//            connection.close();
-            DruidPooledConnection connection1 = dataSource.getConnection();
-            System.out.println(connection1);
-            Statement statement = connection1.createStatement();
+            System.out.println("---0000---"+connection);
+            Statement statement = connection.createStatement();
 
             ResultSet resultSet = statement.executeQuery("SELECT * FROM t_read_num");
             while (resultSet.next()) {
@@ -42,8 +56,6 @@ public class MyMain {
 //                System.out.println(" title= " + resultSet.getString(2).replace("\n", "").replace("\r", ""));
 
             }
-            statement.close();
-            connection1.close();
         } catch (SQLException e) {
             e.printStackTrace();
         }

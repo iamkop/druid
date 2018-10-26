@@ -735,12 +735,17 @@ public class DruidDataSource extends DruidAbstractDataSource implements DruidDat
     }
 
     public void init() throws SQLException {
+        // 是否初始化过
+        // 在getConnection()才开始初始化,而不是new DruidDataSource()
+        // 它被调用过后,inited会设置为true,下次getConnection()执行到这即返回
         if (inited) {
             return;
         }
-
+        // 加锁,同步初始化过程
+        // new DruidDataSource()就初始化好了重入锁,构造方法可以选择公平或非公平,默认非公平
         final ReentrantLock lock = this.lock;
         try {
+            // 加锁,和lock()的区别是,这里被其他thread中断会抛异常,而lock()不会抛
             lock.lockInterruptibly();
         } catch (InterruptedException e) {
             throw new SQLException("interrupt", e);
@@ -751,15 +756,26 @@ public class DruidDataSource extends DruidAbstractDataSource implements DruidDat
             if (inited) {
                 return;
             }
-
+            // 方法调用栈信息
             initStackTrace = Utils.toString(Thread.currentThread().getStackTrace());
-
+            // datasource id,第一次是1,控制台打印的 "{dataSource-1} inited"就是这个id
+            // 基于cas的java原子操作类来保证线程安全的自增
+            // 当再new DruidDataSource()后,再初始化的时候这id就变成2了
+            // 这个id的实际维护类是DruidDriver,属性dataSourceIdSeed
             this.id = DruidDriver.createDataSourceId();
+            // 如果id > 1,也就是说开启了大于1个的DruidDataSource
             if (this.id > 1) {
+                // (id -1) * 100000
                 long delta = (this.id - 1) * 100000;
+                // 父类DruidAbstractDataSource中connectionIdSeed(连接id种子)重新计算,默认值10000L
+                // 例如id=2,计算后的值为110000,这里利用了AtomicLongFieldUpdater来保证对象中属性的原子操作
+                // 那么问题来了,上面已经加锁了,为什么这里还要原子操作?
                 this.connectionIdSeedUpdater.addAndGet(this, delta);
+                // 同上,会话id种子
                 this.statementIdSeedUpdater.addAndGet(this, delta);
+                // 同上,结果集id种子
                 this.resultSetIdSeedUpdater.addAndGet(this, delta);
+                // 同上,事务id种子
                 this.transactionIdSeedUpdater.addAndGet(this, delta);
             }
 
@@ -1243,6 +1259,7 @@ public class DruidDataSource extends DruidAbstractDataSource implements DruidDat
     }
 
     public DruidPooledConnection getConnection(long maxWaitMillis) throws SQLException {
+        // 执行初始化
         init();
 
         if (filters.size() > 0) {
