@@ -769,7 +769,7 @@ public class DruidDataSource extends DruidAbstractDataSource implements DruidDat
                 long delta = (this.id - 1) * 100000;
                 // 父类DruidAbstractDataSource中connectionIdSeed(连接id种子)重新计算,默认值10000L
                 // 例如id=2,计算后的值为110000,这里利用了AtomicLongFieldUpdater来保证对象中属性的原子操作
-                // 那么问题来了,上面已经加锁了,为什么这里还要原子操作?
+                // 那么问题来了,上面已经加锁了,为什么这里还要原子操作?参考:
                 this.connectionIdSeedUpdater.addAndGet(this, delta);
                 // 同上,会话id种子
                 this.statementIdSeedUpdater.addAndGet(this, delta);
